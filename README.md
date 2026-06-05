@@ -108,8 +108,8 @@ az containerapp env create \
 
 | Service | URL |
 |---------|-----|
-| API (docs) | `https://devops-monitor-api.<env>.azurecontainerapps.io/docs` |
-| Dashboard | `https://devops-monitor-dashboard.<env>.azurecontainerapps.io` |
+| API (health) | https://devops-monitor-gja9cdefezgfbmc8.francecentral-01.azurewebsites.net/health |
+| API (docs) | https://devops-monitor-gja9cdefezgfbmc8.francecentral-01.azurewebsites.net/docs |
 
 ## Structure du dépôt
 
