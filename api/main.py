@@ -3,7 +3,6 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
-from fastapi.responses import JSONResponse
 
 from api.auth import verify_api_key
 from api.metrics import get_system_metrics

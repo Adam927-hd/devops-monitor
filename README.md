@@ -1,54 +1,140 @@
 # DevOps Monitoring Dashboard
 
-A real-time DevOps monitoring dashboard built with **FastAPI** (backend) and **Streamlit** (frontend).
+Système de monitoring temps réel construit en Python, containerisé avec Docker, et déployé sur Azure via GitHub Actions.
 
-## Features
+## Architecture
 
-- Live CPU, memory, and disk metrics via REST + WebSocket
-- Server registry with background health polling
-- API key authentication for write endpoints
-- Pytest test suite with >70% coverage
-
-## Quick Start
-
-```bash
-# Create and activate a virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Linux/macOS
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the API (terminal 1)
-uvicorn api.main:app --reload --port 8000
-
-# Start the dashboard (terminal 2)
-streamlit run dashboard/app.py
+```
+GitHub Actions CI/CD
+  ├── lint (flake8)
+  ├── test (pytest --cov ≥ 75 %)
+  ├── build & push → Azure Container Registry
+  └── deploy → Azure Container Apps
+        │
+        ├── devops-monitor-api      (FastAPI  — port 8000)
+        └── devops-monitor-dashboard (Streamlit — port 8501)
 ```
 
-## Environment Variables
+## Prérequis
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_KEY` | `dev-secret-key` | API key for protected endpoints |
+- Python 3.11+
+- Docker & Docker Compose
+- Make (Windows : [chocolatey](https://chocolatey.org/) → `choco install make`)
 
-## API Endpoints
+## Lancement local (Docker)
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/health` | public | Health check |
-| GET | `/metrics` | public | System metrics snapshot |
-| WS | `/ws/metrics` | public | Live metrics stream (1 s) |
-| POST | `/servers` | key | Register a server |
-| GET | `/servers` | public | List servers (optional `?status=UP`) |
-| GET | `/servers/{id}` | public | Get one server |
-| DELETE | `/servers/{id}` | key | Remove a server |
-| POST | `/servers/{id}/check` | public | Trigger immediate health check |
+```bash
+cp .env.example .env   # remplir API_KEY
+make up                # démarre la stack
+make logs              # suivre les logs
+make down              # arrêter la stack
+```
+
+- API : http://localhost:8000/docs
+- Dashboard : http://localhost:8501
+
+## Lancement local (sans Docker)
+
+```bash
+python -m venv venv
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # Linux/macOS
+
+pip install -r requirements.txt
+
+# Terminal 1 — API
+uvicorn api.main:app --reload --port 8000
+
+# Terminal 2 — Dashboard
+streamlit run dashboard/app.py
+```
 
 ## Tests
 
 ```bash
-pytest tests/ -v
-pytest tests/ --cov=api
+make test              # pytest + coverage ≥ 75 %
+make lint              # flake8
+```
+
+## Variables d'environnement
+
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `API_KEY` | `dev-secret-key` | Clé d'accès aux endpoints protégés |
+| `API_BASE_URL` | `http://localhost:8000` | URL de l'API vue par le dashboard |
+
+## API Endpoints
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| GET | `/health` | — | Liveness probe |
+| GET | `/metrics` | — | Snapshot CPU / mémoire / disque |
+| WS | `/ws/metrics` | — | Stream JSON toutes les secondes |
+| POST | `/servers` | clé | Enregistrer un serveur |
+| GET | `/servers` | — | Lister les serveurs (`?status=UP`) |
+| GET | `/servers/{id}` | — | Détail d'un serveur |
+| DELETE | `/servers/{id}` | clé | Supprimer un serveur |
+| POST | `/servers/{id}/check` | — | Déclencher un health check immédiat |
+
+## Déploiement Azure
+
+### Secrets GitHub à configurer
+
+| Secret | Contenu |
+|--------|---------|
+| `AZURE_CLIENT_ID` | App registration client ID |
+| `AZURE_CLIENT_SECRET` | App registration secret |
+| `AZURE_TENANT_ID` | Azure tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Subscription ID |
+| `ACR_NAME` | Nom du registry (sans `.azurecr.io`) |
+
+### Provisionner l'infrastructure
+
+```bash
+az group create --name devops-monitor-rg --location westeurope
+
+az acr create \
+  --name <votre-acr> \
+  --resource-group devops-monitor-rg \
+  --sku Basic
+
+az containerapp env create \
+  --name devops-monitor-env \
+  --resource-group devops-monitor-rg \
+  --location westeurope
+```
+
+### URLs live
+
+| Service | URL |
+|---------|-----|
+| API (docs) | `https://devops-monitor-api.<env>.azurecontainerapps.io/docs` |
+| Dashboard | `https://devops-monitor-dashboard.<env>.azurecontainerapps.io` |
+
+## Structure du dépôt
+
+```
+devops-monitor/
+├── api/                  # Backend FastAPI
+│   ├── main.py
+│   ├── models.py
+│   ├── auth.py
+│   ├── metrics.py
+│   ├── poller.py
+│   └── Dockerfile
+├── dashboard/            # Frontend Streamlit
+│   ├── app.py
+│   └── Dockerfile
+├── tests/
+│   ├── test_metrics.py
+│   ├── test_routes.py
+│   └── test_poller.py
+├── .github/workflows/
+│   └── ci-cd.yml
+├── docker-compose.yml
+├── requirements.txt
+├── Makefile
+├── setup.cfg
+├── .env.example
+└── README.md
 ```

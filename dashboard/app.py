@@ -1,11 +1,12 @@
+import os
 import time
 
 import pandas as pd
 import requests
 import streamlit as st
 
-BASE_URL = "http://localhost:8000"
-API_KEY = "dev-secret-key"
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY", "dev-secret-key")
 
 
 @st.cache_data(ttl=2)
@@ -25,7 +26,11 @@ def fetch_servers() -> list[dict]:
 
 
 def status_color(val: str) -> str:
-    colors = {"UP": "background-color: #d4edda", "DEGRADED": "background-color: #fff3cd", "DOWN": "background-color: #f8d7da"}
+    colors = {
+        "UP": "background-color: #d4edda",
+        "DEGRADED": "background-color: #fff3cd",
+        "DOWN": "background-color: #f8d7da",
+    }
     return colors.get(val, "")
 
 
