@@ -9,7 +9,6 @@ BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 API_KEY = os.getenv("API_KEY", "dev-secret-key")
 
 
-@st.cache_data(ttl=2)
 def fetch_metrics() -> dict:
     try:
         return requests.get(f"{BASE_URL}/metrics", timeout=3).json()
@@ -41,8 +40,6 @@ tab_metrics, tab_servers = st.tabs(["Metrics", "Servers"])
 
 # --- Tab 1: live metrics ---
 with tab_metrics:
-    placeholder = st.empty()
-
     if "history" not in st.session_state:
         st.session_state.history = []
 
@@ -52,23 +49,21 @@ with tab_metrics:
         st.session_state.history.append(
             {"time": ts, "cpu": data.get("cpu_percent", 0), "memory": data.get("memory_percent", 0)}
         )
-        # keep only last 60 points
         st.session_state.history = st.session_state.history[-60:]
 
-        with placeholder.container():
-            col1, col2, col3 = st.columns(3)
-            col1.metric("CPU %", f"{data.get('cpu_percent', 0):.1f}%")
-            col2.metric("Memory %", f"{data.get('memory_percent', 0):.1f}%")
-            col3.metric("Disk %", f"{data.get('disk_percent', 0):.1f}%")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("CPU %", f"{data.get('cpu_percent', 0):.1f}%")
+        col2.metric("Memory %", f"{data.get('memory_percent', 0):.1f}%")
+        col3.metric("Disk %", f"{data.get('disk_percent', 0):.1f}%")
 
-            if len(st.session_state.history) > 1:
-                df = pd.DataFrame(st.session_state.history).set_index("time")
-                st.line_chart(df[["cpu", "memory"]])
+        if len(st.session_state.history) > 1:
+            df = pd.DataFrame(st.session_state.history).set_index("time")
+            st.line_chart(df[["cpu", "memory"]])
     else:
         st.error("Cannot reach the API backend.")
 
-    time.sleep(2)
-    st.rerun()
+    if st.button("Refresh metrics"):
+        st.rerun()
 
 # --- Tab 2: servers ---
 with tab_servers:
